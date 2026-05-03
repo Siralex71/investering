@@ -1,1 +1,360 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portefølje — Investeringsværktøj</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0e14; --surface: #131720; --surface2: #1a2030; --surface3: #202840;
+  --border: #252d42; --accent: #c9a84c; --accent2: #4c8cc9; --green: #3fcf82;
+  --red: #e05c5c; --text: #e8e4d8; --muted: #6b7490;
+  --font-d: 'DM Serif Display', serif; --font-b: 'DM Sans', sans-serif; --font-m: 'DM Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:var(--font-b); font-size:14px; min-height:100vh; }
+body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 70% 50% at 5% 10%, rgba(201,168,76,0.06) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 95% 90%, rgba(76,140,201,0.05) 0%, transparent 60%); pointer-events:none; z-index:0; }
+.app { display:flex; flex-direction:column; min-height:100vh; position:relative; z-index:1; }
+header { display:flex; align-items:center; justify-content:space-between; padding:20px 32px; border-bottom:1px solid var(--border); background:rgba(11,14,20,0.8); backdrop-filter:blur(12px); position:sticky; top:0; z-index:100; }
+.logo { display:flex; align-items:baseline; gap:10px; }
+.logo h1 { font-family:var(--font-d); font-size:24px; color:var(--text); }
+.logo h1 em { color:var(--accent); }
+.logo .ver { font-family:var(--font-m); font-size:10px; color:var(--muted); letter-spacing:2px; }
+.tabs { display:flex; gap:4px; }
+.tab { padding:8px 20px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:500; border:1px solid transparent; color:var(--muted); background:none; transition:all .2s; }
+.tab:hover { color:var(--text); background:var(--surface2); }
+.tab.active { color:var(--accent); background:var(--surface2); border-color:rgba(201,168,76,0.3); }
+.content { flex:1; padding:32px; max-width:1300px; margin:0 auto; width:100%; }
+.pane { display:none; } .pane.active { display:block; }
+.summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px; }
+.sum-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 24px; position:relative; overflow:hidden; }
+.sum-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--accent), transparent); }
+.sum-card .label { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.sum-card .value { font-family:var(--font-m); font-size:26px; font-weight:500; }
+.sum-card .sub { font-size:12px; color:var(--muted); margin-top:4px; }
+.pos { color:var(--green); } .neg { color:var(--red); }
+.sec-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.sec-title { font-family:var(--font-d); font-size:20px; }
+.btn { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:500; font-family:var(--font-b); border:none; transition:all .2s; }
+.btn-primary { background:var(--accent); color:#0b0e14; }
+.btn-primary:hover { background:#d4b660; transform:translateY(-1px); }
+.btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+.btn-sm { padding:6px 14px; font-size:12px; }
+.btn-danger { background:rgba(224,92,92,0.15); color:var(--red); border:1px solid rgba(224,92,92,0.3); }
+.btn-danger:hover { background:rgba(224,92,92,0.25); }
+.table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; padding:14px 20px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); background:var(--surface2); }
+td { padding:14px 20px; border-bottom:1px solid rgba(37,45,66,0.5); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,0.02); }
+.ticker { font-family:var(--font-m); font-weight:500; color:var(--accent); }
+.num { font-family:var(--font-m); }
+.score { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; font-family:var(--font-m); font-size:13px; font-weight:500; }
+.score-high { background:rgba(63,207,130,0.15); color:var(--green); }
+.score-mid { background:rgba(201,168,76,0.15); color:var(--accent); }
+.score-low { background:rgba(224,92,92,0.15); color:var(--red); }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); display:none; align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:32px; width:500px; max-width:95vw; position:relative; }
+.modal h2 { font-family:var(--font-d); font-size:22px; margin-bottom:24px; }
+.modal-close { position:absolute; top:20px; right:20px; background:var(--surface2); border:none; color:var(--muted); width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { color:var(--text); }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+.form-full { grid-column:1/-1; }
+.field label { display:block; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.field input, .field select { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:var(--font-b); font-size:14px; outline:none; transition:border-color .2s; }
+.field input:focus, .field select:focus { border-color:var(--accent); }
+.field input::placeholder { color:var(--muted); }
+.analyse-layout { display:grid; grid-template-columns:360px 1fr; gap:24px; align-items:start; }
+.analyse-form { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; }
+.analyse-form h2 { font-family:var(--font-d); font-size:20px; margin-bottom:20p
+<body>
+<div class="app">
+  <header>
+    <div class="logo"><h1>Portef<em>ø</em>lje</h1><span class="ver">v2.2</span></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('portefolje')">📊 Portefølje</button>
+      <button class="tab" onclick="switchTab('analyse')">🔍 Aktie Analyse</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="pane active" id="pane-portefolje">
+      <div class="summary-strip">
+        <div class="sum-card"><div class="label">Samlet Investeret</div><div class="value num" id="sum-invested">0 kr</div><div class="sub">Kostpris</div></div>
+        <div class="sum-card"><div class="label">Aktuel Værdi</div><div class="value num" id="sum-value">0 kr</div><div class="sub">Markedsværdi</div></div>
+        <div class="sum-card"><div class="label">Gevinst / Tab</div><div class="value num" id="sum-profit">0 kr</div><div class="sub" id="sum-pct">0.00%</div></div>
+        <div class="sum-card"><div class="label">Positioner</div><div class="value num" id="sum-count">0</div><div class="sub">Aktier i portefølje</div></div>
+      </div>
+      <div class="sec-header">
+        <div class="sec-title">Mine Positioner</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="refresh-btn" class="btn btn-ghost" onclick="refreshAllPrices()">🔄 Opdater kurser</button>
+          <button class="btn btn-ghost" onclick="exportData()">💾 Eksport</button>
+          <label class="btn btn-ghost" style="cursor:pointer">📂 Importer <input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+          <button class="btn btn-primary" onclick="openModal()">+ Tilføj aktie</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ticker</th><th>Navn</th><th>Antal</th><th>Købskurs</th><th>Nuv. Kurs</th><th>Investeret</th><th>Værdi</th><th>Afkast</th><th>Score</th><th></th></tr></thead>
+          <tbody id="portfolio-tbody">
+            <tr><td colspan="10"><div class="empty-state"><p>Ingen positioner endnu</p><button class="btn btn-primary" onclick="openModal()">+ Tilføj din første aktie</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pane" id="pane-analyse">
+      <div class="analyse-layout">
+        <div class="analyse-form">
+          <h2>🔍 Aktie Analyse</h2>
+          <div class="field" style="margin-bottom:14px">
+            <label>Ticker symbol</label>
+            <input type="text" id="analyse-ticker" placeholder="fx AAPL, NOVO-B.CO, NKT.CO" style="text-transform:uppercase">
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Hurtig søgning</div>
+            <div class="quick-picks">
+              <span class="qp" onclick="setTicker('AAPL')">AAPL</span>
+              <span class="qp" onclick="setTicker('NVDA')">NVDA</span>
+              <span class="qp" onclick="setTicker('MSFT')">MSFT</span>
+              <span class="qp" onclick="setTicker('NKT.CO')">NKT</span>
+              <span class="qp" onclick="setTicker('NOVO-B.CO')">Novo B</span>
+              <span class="qp" onclick="setTicker('VWS.CO')">Vestas</span>
+              <span class="qp" onclick="setTicker('TSLA')">TSLA</span>
+              <span class="qp" onclick="setTicker('AMD')">AMD</span>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:20px">
+            <label>Kontekst (valgfrit)</label>
+            <input type="text" id="analyse-context" placeholder="fx langsigtet, højt risikoappetit...">
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="runAnalyse()">Analysér aktie →</button>
+          <div class="mini-chart" id="portfolio-context" style="display:none">
+            <div class="mini-chart-label">Din portefølje</div>
+            <div id="portfolio-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </div>
+        <div class="analyse-result" id="analyse-result">
+          <div class="result-empty">
+            <div class="icon">📈</div>
+            <div style="font-family:var(--font-d);font-size:18px;color:var(--text)">Klar til analyse</div>
+            <div style="font-size:13px;max-width:250px">Indtast et ticker-symbol og lad AI'en vurdere om det er en god investering</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>Tilføj aktie</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Ticker symbol *</label>
+        <input type="text" id="m-ticker" placeholder="fx AAPL" style="text-transform:uppercase"
+          onblur="fetchLivePrice(this.value.trim().toUpperCase())"
+          onkeydown="if(event.key==='Enter'||event.key==='Tab'){fetchLivePrice(this.value.trim().toUpperCase())}">
+      </div>
+      <div class="field"><label>Navn *</label><input type="text" id="m-name" placeholder="fx Apple Inc."></div>
+      <div class="field"><label>Antal aktier *</label><input type="number" id="m-antal" placeholder="fx 10" min="0"></div>
+      <div class="field"><label>Købskurs *</label><input type="number" id="m-buy" placeholder="fx 185.50" step="0.01"></div>
+      <div class="field"><label>Nuværende kurs</label><input type="number" id="m-current" placeholder="Hentes automatisk..." step="0.01"></div>
+      <div class="field"><label>Valuta</label>
+        <select id="m-currency">
+          <option value="DKK">DKK</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="SEK">SEK</option><option value="NOK">NOK</option>
+        </select>
+      </div>
+      <div class="field form-full"><label>Børs</label><input type="text" id="m-exchange" placeholder="fx Nasdaq, Nasdaq Copenhagen..."></div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeModal()">Annuller</button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="addStock()">Tilføj →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let portfolio = JSON.parse(localStorage.getItem('portfolio_v2') || '[]');
+const TWELVE_KEY = '490af483b87a42e1b61203ba8e7cdbd7';
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('pane-' + tab).classList.add('active');
+  if (tab === 'analyse') updatePortfolioContext();
+}
+
+async function fetchLivePrice(ticker) {
+  const curEl = document.getElementById('m-current');
+  const nameEl = document.getElementById('m-name');
+  if (!ticker) return;
+  curEl.value = ''; curEl.placeholder = '⏳ Henter kurs...'; curEl.style.borderColor = 'rgba(76,140,201,0.8)';
+  const ex = document.getElementById('price-badge'); if (ex) ex.remove();
+  try {
+    const res = await fetch('https://api.twelvedata.com/price?symbol=' + encodeURIComponent(ticker) + '&apikey=' + TWELVE_KEY);
+    const data = await res.json();
+    if (data.price && parseFloat(data.price) > 0) {
+      const price = parseFloat(data.price);
+      curEl.value = price.toFixed(2); curEl.style.borderColor = 'var(--green)'; curEl.placeholder = '';
+      try {
+        const qRes = await fetch('https://api.twelvedata.com/quote?symbol=' + encodeURIComponent(ticker) + '&apikey=' + TWELVE_KEY);
+        const q = await qRes.json();
+        if (q.name && !nameEl.value) nameEl.value = q.name;
+        const cur = q.currency || 'USD';
+        const chg = parseFloat(q.percent_change) || 0;
+        const cm = document.getElementById('m-currency');
+        if (['DKK','USD','EUR','SEK','NOK'].includes(cur)) cm.value = cur;
+        showPriceBadge(price, cur, chg);
+      } catch(e) { showPriceBadge(price, 'USD', 0); }
+      return;
+    }
+    throw new Error(data.message || 'Ingen kurs');
+  } catch(e) {
+    curEl.placeholder = '⚠️ Ikke fundet — indtast manuelt'; curEl.style.borderColor = 'var(--red)';
+    setTimeout(() => { curEl.placeholder = 'Indtast kurs manuelt'; curEl.style.borderColor = ''; }, 4000);
+  }
+}
+
+async function refreshAllPrices() {
+  if (!portfolio.length) return;
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Opdaterer...'; }
+  for (let i = 0; i < portfolio.length; i++) {
+    try {
+      const res = await fetch('https://api.twelvedata.com/price?symbol=' + encodeURIComponent(portfolio[i].ticker) + '&apikey=' + TWELVE_KEY);
+      const data = await res.json();
+      if (data.price && parseFloat(data.price) > 0) portfolio[i].curPrice = parseFloat(data.price);
+    } catch(e) {}
+  }
+  save(); render();
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Opdater kurser'; }
+}
+
+function showPriceBadge(price, currency, changePct) {
+  const ex = document.getElementById('price-badge'); if (ex) ex.remove();
+  const sign = (changePct||0) >= 0 ? '+' : '';
+  const color = (changePct||0) >= 0 ? 'var(--green)' : 'var(--red)';
+  const badge = document.createElement('div');
+  badge.id = 'price-badge';
+  badge.style.cssText = 'font-size:12px;color:' + color + ';margin-top:6px;font-family:var(--font-m)';
+  badge.textContent = '✓ ' + price.toFixed(2) + ' ' + currency + ' (' + sign + (changePct||0).toFixed(2) + '% i dag)';
+  document.getElementById('m-current').parentNode.appendChild(badge);
+}
+
+function openModal(ticker='') {
+  document.getElementById('modal').classList.add('open');
+  if (ticker) { document.getElementById('m-ticker').value = ticker; fetchLivePrice(ticker); }
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  ['m-ticker','m-name','m-antal','m-buy','m-current','m-exchange'].forEach(id => { const el = document.getElementById(id); el.value=''; el.style.borderColor=''; });
+  document.getElementById('m-currency').value = 'DKK';
+  const b = document.getElementById('price-badge'); if (b) b.remove();
+}
+function addStock() {
+  const ticker = document.getElementById('m-ticker').value.trim().toUpperCase();
+  const name = document.getElementById('m-name').value.trim();
+  const antal = parseFloat(document.getElementById('m-antal').value);
+  const buyPrice = parseFloat(document.getElementById('m-buy').value);
+  const curPrice = parseFloat(document.getElementById('m-current').value) || buyPrice;
+  const currency = document.getElementById('m-currency').value;
+  const exchange = document.getElementById('m-exchange').value.trim();
+  if (!ticker || !name || !antal || !buyPrice) { alert('Udfyld venligst alle påkrævede felter (*)'); return; }
+  portfolio.push({ ticker, name, antal, buyPrice, curPrice, currency, exchange, score: null, addedAt: Date.now() });
+  save(); render(); closeModal();
+}
+function deleteStock(i) {
+  if (!confirm('Slet ' + portfolio[i].ticker + '?')) return;
+  portfolio.splice(i, 1); save(); render();
+}
+function save() { localStorage.setItem('portfolio_v2', JSON.stringify(portfolio)); }
+function fmt(n, d=2) { return n.toLocaleString('da-DK', { minimumFractionDigits:d, maximumFractionDigits:d }); }
+function scoreBadge(score) {
+  if (score === null) return '<span style="color:var(--muted);font-size:12px">—</span>';
+  const cls = score >= 7 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low';
+  return '<span class="score ' + cls + '">' + score + '</span>';
+}
+function render() {
+  const tbody = document.getElementById('portfolio-tbody');
+  if (!portfolio.length) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><p>Ingen positioner endnu</p><button class="btn btn-primary" onclick="openModal()">+ Tilføj din første aktie</button></div></td></tr>';
+    updateSummary(0,0); return;
+  }
+  let ti=0, tv=0;
+  tbody.innerHTML = portfolio.map((s,i) => {
+    const inv = s.antal * s.buyPrice, val = s.antal * s.curPrice, prf = val - inv, pct = inv > 0 ? prf/inv*100 : 0;
+    ti += inv; tv += val;
+    const pc = prf >= 0 ? 'pos' : 'neg', sg = prf >= 0 ? '+' : '';
+    return '<tr><td><span class="ticker">' + s.ticker + '</span></td><td>' + s.name + '</td><td class="num">' + fmt(s.antal,0) + '</td><td class="num">' + fmt(s.buyPrice) + ' ' + s.currency + '</td><td class="num">' + fmt(s.curPrice) + ' ' + s.currency + '</td><td class="num">' + fmt(inv) + '</td><td class="num">' + fmt(val) + '</td><td class="num ' + pc + '">' + sg + fmt(prf) + ' (' + sg + fmt(pct) + '%)</td><td>' + scoreBadge(s.score) + '</td><td><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="analyseFromPortfolio(\'' + s.ticker + '\')">Analysér</button><button class="btn btn-danger btn-sm" onclick="deleteStock(' + i + ')">✕</button></div></td></tr>';
+  }).join('');
+  updateSummary(ti, tv);
+}
+function updateSummary(inv, val) {
+  const prf = val - inv, pct = inv > 0 ? prf/inv*100 : 0;
+  document.getElementById('sum-invested').textContent = fmt(inv) + ' kr';
+  document.getElementById('sum-value').textContent = fmt(val) + ' kr';
+  document.getElementById('sum-count').textContent = portfolio.length;
+  const pe = document.getElementById('sum-profit'), ce = document.getElementById('sum-pct');
+  pe.textContent = (prf>=0?'+':'') + fmt(prf) + ' kr';
+  ce.textContent = (prf>=0?'+':'') + fmt(pct) + '%';
+  pe.className = 'value num ' + (prf>=0?'pos':'neg');
+  ce.className = 'sub ' + (prf>=0?'pos':'neg');
+}
+function analyseFromPortfolio(ticker) { switchTabDirect('analyse'); document.getElementById('analyse-ticker').value = ticker; runAnalyse(); }
+function switchTabDirect(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab')[tab==='analyse'?1:0].classList.add('active');
+  document.getElementById('pane-' + tab).classList.add('active');
+  updatePortfolioContext();
+}
+function setTicker(ticker) { document.getElementById('analyse-ticker').value = ticker; }
+function updatePortfolioContext() {
+  const panel = document.getElementById('portfolio-context'), list = document.getElementById('portfolio-list');
+  if (!portfolio.length) { panel.style.display='none'; return; }
+  panel.style.display='block';
+  list.innerHTML = portfolio.map(s => {
+    const pct = (s.curPrice - s.buyPrice) / s.buyPrice * 100;
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span class="ticker" style="font-size:12px">' + s.ticker + '</span><span class="num ' + (pct>=0?'pos':'neg') + '" style="font-size:12px">' + (pct>=0?'+':'') + fmt(pct) + '%</span></div>';
+  }).join('');
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(portfolio,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'portefolje-backup.json'; a.click();
+}
+function importData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { try { const d = JSON.parse(e.target.result); if (!Array.isArray(d)) throw new Error('Fejl'); portfolio=d; save(); render(); alert('✓ '+d.length+' aktier importeret!'); } catch(err) { alert('Fejl: '+err.message); } };
+  reader.readAsText(file); event.target.value='';
+}
+async function runAnalyse() {
+  const ticker = document.getElementById('analyse-ticker').value.trim().toUpperCase();
+  const context = document.getElementById('analyse-context').value.trim();
+  const resultEl = document.getElementById('analyse-result');
+  if (!ticker) { alert('Skriv et ticker-symbol'); return; }
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div><div style="font-family:var(--font-d);font-size:18px;color:var(--text)">Analyserer ' + ticker + '...</div><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+  const portCtx = portfolio.length > 0 ? '\n\nBrugerens portefølje: ' + portfolio.map(s => s.ticker).join(', ') + '. Vurder om den nye aktie passer ind.' : '';
+  const prompt = 'Du er aktieanalytiker. Analysér ' + ticker + (context ? ' (kontekst: '+context+')' : '') + portCtx + '\n\nGiv analyse med: Overblik, Nøgletal, Styrker, Risici, Teknisk perspektiv, Konklusion.\n\nAfslut med: SCORE: [1-10]';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, messages:[{role:'user',content:prompt}] }) });
+    const data = await res.json();
+    const raw = data.content?.map(b => b.text||'').join('') || '';
+    const sm = raw.match(/SCORE:\s*(\d+)/i); const score = sm ? parseInt(sm[1]) : null;
+    const body = raw.replace(/SCORE:\s*\d+/i,'').trim().replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/^#{1,3}\s+(.+)$/gm,'<h3>$1</h3>').replace(/^- (.+)$/gm,'<li>$1</li>').split('\n\n').map(p=>p.startsWith('<')?p:'<p>'+p+'</p>').join('\n');
+    const idx = portfolio.findIndex(s=>s.ticker===ticker);
+    if (idx!==-1 && score!==null) { portfolio[idx].score=score; save(); render(); }
+    const sc = !score?'var(--muted)':score>=7?'var(--green)':score>=5?'var(--accent)':'var(--red)';
+    resultEl.innerHTML = '<div class="ai-header"><div><div class="ai-ticker">Analyse: <span>'+ticker+'</span></div><div style="font-size:12px;color:var(--muted);margin-top:4px">AI-genereret · Ikke finansiel rådgivning</div></div>'+(score!==null?'<div class="score-big"><div class="num" style="color:'+sc+'">'+score+'/10</div><div class="lbl">Score</div></div>':'')+'</div><div class="ai-body">'+body+'</div>'+(idx===-1?'<div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)"><button class="btn btn-ghost" onclick="openModal(\''+ticker+'\')">+ Tilføj '+ticker+' til portefølje</button></div>':'');
+  } catch(e) { resultEl.innerHTML = '<div class="result-empty"><div class="icon">⚠️</div><div style="color:var(--red)">Analyse fejlede</div></div>'; }
+}
+render();
+</script>
+</body>
+</html>
